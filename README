@@ -1,0 +1,7 @@
+grooveshark_py: A simple module for building Grooveshark API call URLs.
+
+build_url() is the only function you need; the other two are just helpers for it. 
+
+For more information, see http://www.grooveshark.com/api
+
+Note: I'm new to Python, so there may be naive or incomplete bits.
