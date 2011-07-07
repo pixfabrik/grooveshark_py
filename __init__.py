@@ -1,87 +1,45 @@
 # ----------
-# grooveshark_py: A simple module for building Grooveshark API call URLs.
+# grooveshark_py: A simple module for building Grooveshark API calls.
 #
-# build_url() is the only function you need; the other two are just helpers for it. 
+# For more information on the Grooveshark API, see http://www.grooveshark.com/api
 #
-# Note: I'm new to Python, so there may be naive or incomplete bits.
-#
-# ----------
-# LICENSE
-#
-# The MIT License
-#
-# Copyright (c) 2011 Ian Gilman, ian@iangilman.com
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# This file copyright (c) 2011 Ian Gilman, ian@iangilman.com
+# Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
 # ----------
 
 import hmac
 
+try:
+    import json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        from django.utils import simplejson as json # works in Google App Engine
+
 # ----------
-# The arguments method, ws_key and secret are all strings, and params is a 
-# dictionary (possibly nested, e.g. the country param for getSubscriberStreamKey).
-# For more information, see http://www.grooveshark.com/api
-def build_url(method, params, ws_key, secret):
+# build_request
+#
+# Parameters: 
+#   method, ws_key, secret, and session_id are all strings
+#   params is a dictionary (possibly nested, e.g. the country param for getSubscriberStreamKey).
+#
+# Returns a dictionary with 3 strings. 
+def build_request(method, params, ws_key, secret, session_id):
   host = "api.grooveshark.com"
-  endpoint = "ws/2.1/"
-
-  sig = make_sig(method, params, secret)
-  url = "http://%s/%s?method=%s&%s&wsKey=%s&sig=%s&format=json" % \
-    (host, endpoint, method, make_param_string(params), ws_key, sig)
-  
-  return url
-
-# ----------
-def make_sig(method, params, secret): 
-  data = method 
-  
-  keys = params.keys()
-  keys.sort()
-  for key in keys:
-    data += key
-    value = params[key]
-    if (type(value) == dict):
-      keys2 = value.keys()
-      if (len(keys2)):
-        for key2 in keys2:
-          data += key2 + value[key2]
-    else:
-      data += value
+  endpoint = "ws3.php"
+  protocol = "http"
+  if method == "startSession" or method == "authenticate":
+    protocol = "https"
     
-  return hmac.new(secret, data).hexdigest()
-
-# ----------
-# We use this instead of urllib.urlencode, because the latter doesn't handle 
-# nested parameters in the fashion the grooveshark API expects. 
-def make_param_string(params):
-  param_string = ""
-  keys = params.keys()
-  if (len(keys)):
-    keys.sort()
-    for key in keys:
-      value = params[key]
-      if (type(value) == dict):
-        keys2 = value.keys()
-        if (len(keys2)):
-          for key2 in keys2:
-            param_string += "%s[%s]=%s&" % (key, key2, value[key2].replace(" ", "+"))
-      else: 
-        param_string += "%s=%s&" % (key, params[key].replace(" ", "+"))
+  header = {"wsKey": ws_key}
+  if session_id: 
+    header["sessionID"] = session_id
+    
+  request = {"method": method, "header": header, "parameters": params}
+  request_json = json.dumps(request)
+  sig = hmac.new(secret, request_json).hexdigest()
+  url = "%s://%s/%s?sig=%s" % (protocol, host, endpoint, sig)
   
-  return param_string.rstrip("&")
+  return {"url": url, "payload": request_json, "method": "POST"}
+
