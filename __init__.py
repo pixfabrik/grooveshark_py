@@ -1,10 +1,10 @@
 # ----------
 # grooveshark_py: A simple module for building Grooveshark API calls.
 #
-# For more information on the Grooveshark API, see http://www.grooveshark.com/api
-#
-# This file copyright (c) 2011 Ian Gilman, ian@iangilman.com
+# Copyright 2011, Pixfabrik, LLC.
 # Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
+#
+# For more information on the Grooveshark API, see http://www.grooveshark.com/api
 # ----------
 
 import hmac
